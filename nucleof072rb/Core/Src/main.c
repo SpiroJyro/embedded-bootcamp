@@ -19,8 +19,12 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include <string.h>
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -44,11 +48,15 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+const uint8_t INIT_BITS = 0x1;
+const uint8_t SGL_DIFF = 0x80;
+const uint8_t BUFFER_BITS = 0x1; // change to hex
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void Set_Motor_Speed(uint8_t buffer[]);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -64,8 +72,15 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
 
+  /* USER CODE BEGIN 1 */
+	// One char is one byte
+  uint8_t spi_buf_rx[3]; // Need this to receive the data. Don't know about length though
+  // NEED TO CREATE A TXBUFF TO STORE 3 BYTES NEEDED TO GET MESSAGE FROM ADC
+  uint8_t spi_buf_tx[3];
+  spi_buf_tx[0] = INIT_BITS;
+  spi_buf_tx[1] = SGL_DIFF;
+  spi_buf_tx[2] = BUFFER_BITS;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -74,6 +89,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 
   /* USER CODE END Init */
 
@@ -87,7 +103,13 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_SPI1_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+
+  // CS Pin should be default high
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+ // Add Hal Function
 
   /* USER CODE END 2 */
 
@@ -95,9 +117,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_RESET);
+	HAL_SPI_TransmitReceive(&hspi1, spi_buf_tx, spi_buf_rx, 3, 100);
+	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
+
+	Set_Motor_Speed(spi_buf_rx);
+	memset(spi_buf_rx, 0, sizeof(spi_buf_rx));
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
@@ -106,6 +136,8 @@ int main(void)
   * @brief System Clock Configuration
   * @retval None
   */
+
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -122,6 +154,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -143,6 +176,18 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void Set_Motor_Speed(uint8_t buffer[]){
+	uint16_t max_val = 1023;
+	float add_for_max = 3200;
+
+	uint16_t combined = ((uint16_t)(buffer[1] & 0x03) << 8) | (uint16_t)buffer[2];
+	uint16_t adc_val = combined & 0x03FF;
+
+	float mot_power = ((float)adc_val/(float)max_val);
+	float percent_pwr = add_for_max + (add_for_max * mot_power);
+
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, percent_pwr);
+}
 
 /* USER CODE END 4 */
 
@@ -177,5 +222,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
