@@ -23,6 +23,7 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -55,7 +56,7 @@ const uint8_t BUFFER_BITS = 0x1; // change to hex
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+void Set_Motor_Speed(uint8_t buffer[]);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -178,7 +179,7 @@ void Set_Motor_Speed(uint8_t buffer[]){
 	uint16_t combined = ((uint16_t)(buffer[1] & 0x03) << 8) | (uint16_t)buffer[2];
 	uint16_t adc_val = combined & 0x03FF;
 
-	int mot_power = (adc_val/max_val);
+	int mot_power = ((int)adc_val/max_val);
 	int percent_pwr = add_for_max + (add_for_max * mot_power);
 
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, percent_pwr);
