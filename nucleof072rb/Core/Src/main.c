@@ -23,8 +23,6 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
-#include <string.h>
-
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -56,7 +54,6 @@ const uint8_t BUFFER_BITS = 0x1; // change to hex
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void Set_Motor_Speed(uint8_t buffer[]);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -109,7 +106,7 @@ int main(void)
 
   // CS Pin should be default high
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_8, GPIO_PIN_SET);
- // Add Hal Function
+  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 3200);
 
   /* USER CODE END 2 */
 
@@ -136,8 +133,6 @@ int main(void)
   * @brief System Clock Configuration
   * @retval None
   */
-
-
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -177,14 +172,14 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void Set_Motor_Speed(uint8_t buffer[]){
-	uint16_t max_val = 1023;
-	float add_for_max = 3200;
+	int max_val = 1023;
+	int add_for_max = 3200;
 
 	uint16_t combined = ((uint16_t)(buffer[1] & 0x03) << 8) | (uint16_t)buffer[2];
 	uint16_t adc_val = combined & 0x03FF;
 
-	float mot_power = ((float)adc_val/(float)max_val);
-	float percent_pwr = add_for_max + (add_for_max * mot_power);
+	int mot_power = (adc_val/max_val);
+	int percent_pwr = add_for_max + (add_for_max * mot_power);
 
 	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, percent_pwr);
 }
