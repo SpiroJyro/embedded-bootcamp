@@ -173,16 +173,16 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void Set_Motor_Speed(uint8_t buffer[]){
-	int max_val = 1023;
-	int add_for_max = 3200;
+	float max_val = 1023;
+	float add_for_max = 3200;
 
 	uint16_t combined = ((uint16_t)(buffer[1] & 0x03) << 8) | (uint16_t)buffer[2];
 	uint16_t adc_val = combined & 0x03FF;
 
-	int mot_power = ((int)adc_val/max_val);
-	int percent_pwr = add_for_max + (add_for_max * mot_power);
+	float mot_power = (adc_val/max_val);
+	int duty_period = add_for_max + (add_for_max * mot_power);
 
-	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, percent_pwr);
+	__HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, duty_period);
 }
 
 /* USER CODE END 4 */
